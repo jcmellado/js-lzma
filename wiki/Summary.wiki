@@ -9,10 +9,10 @@ LZMA.decompress(properties, inStream, outStream, outSize);
 }}}
 
 Where:
-* `properties` is the input data stream with LZMA properties
-* `inStream` is the input data stream to decompress
-* `outStream` is the output data stream
-* `outSize` is the expected size of output data stream
+ * `properties` is the input data stream with LZMA properties
+ * `inStream` is the input data stream to decompress
+ * `outStream` is the output data stream
+ * `outSize` is the expected size of output data stream
 
 = Streams =
 
@@ -40,7 +40,7 @@ var outStream = {
 };
 }}}
 
-Ok, you can mix both on a more generic one.
+Ok, you can mix both on a more generic one. And change `Array` to `String`, `Typed Array` or whatever you want.
 
 = Limitations =
 
