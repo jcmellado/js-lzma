@@ -20,7 +20,7 @@ Input data streams must be JavaScript objects exposing a public `readByte` funct
 
 {{{
 var inStream = {
-  data: [],
+  data: [ /* Put your compressed data here */ ],
   offset: 0,
   readByte: function(){
     return this.data[this.offset ++];
@@ -32,7 +32,7 @@ Output data streams must be JavaScript objects exposing a public `writeByte` fun
 
 {{{
 var outStream = {
-  data: [],
+  data: [ /* Uncompressed data will be putted here */ ],
   offset: 0,
   writeByte: function(value){
     this.data[this.offset ++] = value;
@@ -40,11 +40,17 @@ var outStream = {
 };
 }}}
 
-Ok, you can mix both on a more generic one. And change `Array` to `String`, `Typed Array` or whatever you want.
+Ok, you can mix both on a more generic one. And change `Array` to `String`, some sort of `Typed Array`, or whatever you want.
+
+= Properties =
+
+LZMA properties are described on <a href="http://www.7-zip.org/sdk.html">LZMA SDK</a>.
+
+Just five bytes. The first one containing `lc`, `lp` and `pb` parameters, and the last four the dictionary size (little endian encoding).
 
 = Limitations =
 
-Dictionary and output sizes are limited to 32 bits.
+Output size is limited to 32 bits.
 
 = What about compression function? =
 
