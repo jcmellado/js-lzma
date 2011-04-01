@@ -1,0 +1,51 @@
+#summary Basic usage of the library.
+
+= How to use? =
+
+Just call the decompress function.
+
+{{{
+LZMA.decompress(properties, inStream, outStream, outSize);
+}}}
+
+Where:
+`properties` is the input data stream with LZMA properties
+`inStream` is the input data stream to decompress
+`outStream` is the output data stream
+`outSize` is the expected size of output data stream
+
+= Streams =
+
+Input data streams must be JavaScript objects exposing a public `writeByte` function:
+
+{{{
+var inStream = {
+  data: [],
+  offset: 0,
+  writeByte: function(value){
+    this.data[this.offset ++] = value;
+  }
+};
+}}}
+
+Output data streams must be JavaScript objects exposing a public `readByte` function:
+
+{{{
+var outStream = {
+  data: [],
+  offset: 0,
+  readByte: function(){
+    return this.data[this.offset ++];
+  }
+};
+}}}
+
+Ok, you can mix both on a more generic one.
+
+= Limitations =
+
+Dictionary and output sizes are limited to 32 bits.
+
+= What about compression function? =
+
+Sorry, don't. This library is part of another project of mine that only needed the decompression algorithm.
