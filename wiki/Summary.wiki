@@ -2,40 +2,40 @@
 
 = How to use? =
 
-Just call the decompress function.
+Just call to the `decompress` function.
 
 {{{
 LZMA.decompress(properties, inStream, outStream, outSize);
 }}}
 
 Where:
-`properties` is the input data stream with LZMA properties
-`inStream` is the input data stream to decompress
-`outStream` is the output data stream
-`outSize` is the expected size of output data stream
+* `properties` is the input data stream with LZMA properties
+* `inStream` is the input data stream to decompress
+* `outStream` is the output data stream
+* `outSize` is the expected size of output data stream
 
 = Streams =
 
-Input data streams must be JavaScript objects exposing a public `writeByte` function:
+Input data streams must be JavaScript objects exposing a public `readByte` function:
 
 {{{
 var inStream = {
   data: [],
   offset: 0,
-  writeByte: function(value){
-    this.data[this.offset ++] = value;
+  readByte: function(){
+    return this.data[this.offset ++];
   }
 };
 }}}
 
-Output data streams must be JavaScript objects exposing a public `readByte` function:
+Output data streams must be JavaScript objects exposing a public `writeByte` function:
 
 {{{
 var outStream = {
   data: [],
   offset: 0,
-  readByte: function(){
-    return this.data[this.offset ++];
+  writeByte: function(value){
+    this.data[this.offset ++] = value;
   }
 };
 }}}
