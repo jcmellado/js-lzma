@@ -374,7 +374,7 @@ LZMA.Decoder2 = function(){
       symbol = (symbol << 1) | rangeDecoder.decodeBit(_decoders, symbol);
     }while(symbol < 0x100);
 
-    return symbol & 0xff; //JMCA << 24 >> 24
+    return symbol & 0xff;
   }
 
   function decodeWithMatchByte(rangeDecoder, matchByte){
