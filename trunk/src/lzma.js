@@ -102,7 +102,7 @@ LZMA.OutWindow = function(){
       
   function create(windowSize){
     if ( (!_buffer) || (_windowSize !== windowSize) ){
-      _buffer = new Array(windowSize);
+      _buffer = [];
     }
     _windowSize = windowSize;
     _pos = 0;
