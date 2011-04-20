@@ -230,7 +230,7 @@ LZMA.RangeDecoder = function(){
     
     if ( (_code ^ 0x80000000) < (newBound ^ 0x80000000) ){
       _range = newBound;
-      probs[index] = prob + ( (LZMA.Base.k.BitModelTotal - prob) >>> LZMA.Base.k.NumMoveBits);
+      probs[index] += ( (LZMA.Base.k.BitModelTotal - prob) >>> LZMA.Base.k.NumMoveBits);
       if ( (_range & LZMA.Base.k.TopMask) === 0){
         _code = (_code << 8) | _stream.readByte();
         _range <<= 8;
@@ -240,7 +240,7 @@ LZMA.RangeDecoder = function(){
 
     _range -= newBound;
     _code -= newBound;
-    probs[index] = prob - (prob >>> LZMA.Base.k.NumMoveBits);
+    probs[index] -= (prob >>> LZMA.Base.k.NumMoveBits);
     if ( (_range & LZMA.Base.k.TopMask) === 0){
       _code = (_code << 8) | _stream.readByte();
       _range <<= 8;
