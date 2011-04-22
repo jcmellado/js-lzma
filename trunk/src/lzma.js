@@ -1,98 +1,6 @@
 
 var LZMA = LZMA || {};
 
-LZMA.Base = (function(){
-
-  var k = {};
-
-  k.NumRepDistances = 4;
-  k.NumStates = 12;
-
-  k.NumPosSlotBits = 6;
-  k.DicLogSizeMin = 0;
-
-  k.NumLenToPosStatesBits = 2;
-  k.NumLenToPosStates = 1 << k.NumLenToPosStatesBits;
-
-  k.MatchMinLen = 2;
-
-  k.NumAlignBits = 4;
-  k.AlignTableSize = 1 << k.NumAlignBits;
-  k.AlignMask = k.AlignTableSize - 1;
-
-  k.StartPosModelIndex = 4;
-  k.EndPosModelIndex = 14;
-  k.NumPosModels = k.EndPosModelIndex - k.StartPosModelIndex;
-
-  k.NumFullDistances = 1 << (k.EndPosModelIndex / 2);
-
-  k.NumLitPosStatesBitsEncodingMax = 4;
-  k.NumLitContextBitsMax = 8;
-
-  k.NumPosStatesBitsMax = 4;
-  k.NumPosStatesMax = 1 << k.NumPosStatesBitsMax;
-  k.NumPosStatesBitsEncodingMax = 4;
-  k.NumPosStatesEncodingMax = 1 << k.NumPosStatesBitsEncodingMax;
-
-  k.NumLowLenBits = 3;
-  k.NumMidLenBits = 3;
-  k.NumHighLenBits = 8;
-  k.NumLowLenSymbols = 1 << k.NumLowLenBits;
-  k.NumMidLenSymbols = 1 << k.NumMidLenBits;
-  k.NumLenSymbols = k.NumLowLenSymbols + k.NumMidLenSymbols
-    + (1 << k.NumHighLenBits);
-  k.MatchMaxLen = k.MatchMinLen + k.NumLenSymbols - 1;
-
-  k.TopMask = ~( (1 << 24) - 1);
-  k.NumBitModelTotalBits = 11;
-  k.BitModelTotal = 1 << k.NumBitModelTotalBits;
-  k.NumMoveBits = 5;
-
-  return {
-    k: k,
-    
-    stateInit: function(){
-      return 0;
-    },
-
-    stateUpdateChar: function(index){
-      if (index < 4) {
-        return 0;
-      }
-      if (index < 10) {
-        return index - 3;
-      }
-      return index - 6;
-    },
-
-    stateUpdateMatch: function(index){
-      return index < 7? 7: 10; 
-    },
-
-    stateUpdateRep: function(index){
-      return index < 7? 8: 11; 
-    },
-
-    stateUpdateShortRep: function(index){
-      return index < 7? 9: 11; 
-    },
-
-    stateIsCharState: function(index){ 
-      return index < 7; 
-    },
-
-    getLenToPosState: function(len){
-      len -= k.MatchMinLen;
-      if (len < k.NumLenToPosStates){
-        return len;
-      }
-      return k.NumLenToPosStates - 1;
-    }
-  
-  };
-
-}());
-
 LZMA.OutWindow = function(){
   var _buffer,
       _pos,
@@ -109,14 +17,27 @@ LZMA.OutWindow = function(){
     _streamPos = 0;
   }
   
-  function setStream(stream){
-    releaseStream();
-    _stream = stream;
+  function flush(){
+    var size = _pos - _streamPos, i = 0;
+    if (size !== 0){
+      for (; i < size; ++ i){
+        _stream.writeByte(_buffer[_streamPos + i]);
+      }
+      if (_pos >= _windowSize){
+        _pos = 0;
+      }
+      _streamPos = _pos;
+    }
   }
   
   function releaseStream(){
     flush();
     _stream = null;
+  }
+  
+  function setStream(stream){
+    releaseStream();
+    _stream = stream;
   }
   
   function init(solid){
@@ -126,26 +47,12 @@ LZMA.OutWindow = function(){
     }
   }
   
-  function flush(){
-    var size = _pos - _streamPos;
-    if (size === 0){
-      return;
-    }
-    for (var i = 0; i < size; ++ i){
-      _stream.writeByte(_buffer[_streamPos + i]);
-    }
-    if (_pos >= _windowSize){
-      _pos = 0;
-    }
-    _streamPos = _pos;
-  }
-  
   function copyBlock(distance, len){
     var pos = _pos - distance - 1;
     if (pos < 0){
       pos += _windowSize;
     }
-    for (; len !== 0; -- len){
+    while(len --){
       if (pos >= _windowSize){
         pos = 0;
       }
@@ -197,25 +104,26 @@ LZMA.RangeDecoder = function(){
   }
   
   function init(){
+    var i = 5;
+
     _code = 0;
     _range = -1;
     
-    for (var i = 0; i < 5; ++ i){
+    while(i --){
       _code = (_code << 8) | _stream.readByte();
     }
   }
   
   function decodeDirectBits(numTotalBits){
-    var result = 0,
-        i = numTotalBits;
+    var result = 0, i = numTotalBits, t;
     
-    for (; i !== 0; --i){
+    while(i --){
       _range >>>= 1;
-      var t = (_code - _range) >>> 31;
+      t = (_code - _range) >>> 31;
       _code -= _range & (t - 1);
       result = (result << 1) | (1 - t);
       
-      if ( (_range & LZMA.Base.k.TopMask) === 0){
+      if ( (_range & 0xff000000) === 0){
         _code = (_code << 8) | _stream.readByte();
         _range <<= 8;
       }
@@ -226,12 +134,12 @@ LZMA.RangeDecoder = function(){
   
   function decodeBit(probs, index){
     var prob = probs[index],
-        newBound = (_range >>> LZMA.Base.k.NumBitModelTotalBits) * prob;
+        newBound = (_range >>> 11) * prob;
     
     if ( (_code ^ 0x80000000) < (newBound ^ 0x80000000) ){
       _range = newBound;
-      probs[index] += ( (LZMA.Base.k.BitModelTotal - prob) >>> LZMA.Base.k.NumMoveBits);
-      if ( (_range & LZMA.Base.k.TopMask) === 0){
+      probs[index] += (2048 - prob) >>> 5;
+      if ( (_range & 0xff000000) === 0){
         _code = (_code << 8) | _stream.readByte();
         _range <<= 8;
       }
@@ -240,8 +148,8 @@ LZMA.RangeDecoder = function(){
 
     _range -= newBound;
     _code -= newBound;
-    probs[index] -= (prob >>> LZMA.Base.k.NumMoveBits);
-    if ( (_range & LZMA.Base.k.TopMask) === 0){
+    probs[index] -= prob >>> 5;
+    if ( (_range & 0xff000000) === 0){
       _code = (_code << 8) | _stream.readByte();
       _range <<= 8;
     }
@@ -258,39 +166,37 @@ LZMA.RangeDecoder = function(){
 
 };
 
-LZMA.RangeDecoder.initBitModels =
-  function(probs){
-    for (var i = 0; i < probs.length; ++ i){
-      probs[i] = LZMA.Base.k.BitModelTotal >>> 1;
+LZMA.initBitModels =
+  function(probs, len){
+    while(len --){
+      probs[len] = 1024;
     }
   };
 
 LZMA.BitTreeDecoder = function(numBitLevels){
-  var _models = new Array(1 << numBitLevels),
+  var _models = [],
       _numBitLevels = numBitLevels;
 
   function init(){
-    LZMA.RangeDecoder.initBitModels(_models);
+    LZMA.initBitModels(_models, 1 << _numBitLevels);
   }
 
   function decode(rangeDecoder){
-    var m = 1,
-        bitIndex = _numBitLevels;
-    for (; bitIndex !== 0; -- bitIndex){
-      m = (m << 1) + rangeDecoder.decodeBit(_models, m);
+    var m = 1, i = _numBitLevels;
+
+    while(i --){
+      m = (m << 1) | rangeDecoder.decodeBit(_models, m);
     }
     return m - (1 << _numBitLevels);
   }
 
   function reverseDecode(rangeDecoder){
-    var m = 1,
-        symbol = 0,
-        bitIndex = 0;
-    for (; bitIndex < _numBitLevels; ++ bitIndex){
-      var bit = rangeDecoder.decodeBit(_models, m);
-      m <<= 1;
-      m += bit;
-      symbol |= bit << bitIndex;
+    var m = 1, symbol = 0, i = 0, bit;
+
+    for (; i < _numBitLevels; ++ i){
+      bit = rangeDecoder.decodeBit(_models, m);
+      m = (m << 1) | bit;
+      symbol |= bit << i;
     }
     return symbol;
   }
@@ -302,55 +208,50 @@ LZMA.BitTreeDecoder = function(numBitLevels){
   };
 };
 
-LZMA.BitTreeDecoder.reverseDecode2 = 
+LZMA.reverseDecode2 = 
   function(models, startIndex, rangeDecoder, numBitLevels){
-    var m = 1,
-        symbol = 0,
-        bitIndex = 0;
-    for (; bitIndex < numBitLevels; ++ bitIndex){
-      var bit = rangeDecoder.decodeBit(models, startIndex + m);
-      m <<= 1;
-      m += bit;
-      symbol |= bit << bitIndex;
+    var m = 1, symbol = 0, i = 0, bit;
+    
+    for (; i < numBitLevels; ++ i){
+      bit = rangeDecoder.decodeBit(models, startIndex + m);
+      m = (m << 1) | bit;
+      symbol |= bit << i;
     }
     return symbol;
   };
 
 LZMA.LenDecoder = function(){
-  var _choice = new Array(2),
-      _lowCoder = new Array(LZMA.Base.k.NumPosStatesMax),
-      _midCoder = new Array(LZMA.Base.k.NumPosStatesMax),
-      _highCoder = new LZMA.BitTreeDecoder(LZMA.Base.k.NumHighLenBits),
+  var _choice = [],
+      _lowCoder = [],
+      _midCoder = [],
+      _highCoder = new LZMA.BitTreeDecoder(8),
       _numPosStates = 0;
 
   function create(numPosStates){
     for (; _numPosStates < numPosStates; ++ _numPosStates){
-      _lowCoder[_numPosStates] = new LZMA.BitTreeDecoder(LZMA.Base.k.NumLowLenBits);
-      _midCoder[_numPosStates] = new LZMA.BitTreeDecoder(LZMA.Base.k.NumMidLenBits);
+      _lowCoder[_numPosStates] = new LZMA.BitTreeDecoder(3);
+      _midCoder[_numPosStates] = new LZMA.BitTreeDecoder(3);
     }
   }
   
   function init(){
-    var posState = 0;
-    LZMA.RangeDecoder.initBitModels(_choice);
-    for (; posState < _numPosStates; ++ posState){
-      _lowCoder[posState].init();
-      _midCoder[posState].init();
+    var i = _numPosStates;
+    LZMA.initBitModels(_choice, 2);
+    while(i --){
+      _lowCoder[i].init();
+      _midCoder[i].init();
     }
     _highCoder.init();
   }
   
   function decode(rangeDecoder, posState){
-    if ( rangeDecoder.decodeBit(_choice, 0) === 0){
+    if (rangeDecoder.decodeBit(_choice, 0) === 0){
       return _lowCoder[posState].decode(rangeDecoder);
     }
-    var symbol = LZMA.Base.k.NumLowLenSymbols;
     if (rangeDecoder.decodeBit(_choice, 1) === 0){
-      symbol += _midCoder[posState].decode(rangeDecoder);
-    }else{
-      symbol += LZMA.Base.k.NumMidLenSymbols + _highCoder.decode(rangeDecoder);
+      return 8 + _midCoder[posState].decode(rangeDecoder);
     }
-    return symbol;
+    return 16 + _highCoder.decode(rangeDecoder);
   }
 
   return{
@@ -361,10 +262,10 @@ LZMA.LenDecoder = function(){
 };
 
 LZMA.Decoder2 = function(){
-  var _decoders = new Array(0x300);
+  var _decoders = [];
   
   function init(){
-    LZMA.RangeDecoder.initBitModels(_decoders);
+    LZMA.initBitModels(_decoders, 0x300);
   }
 
   function decodeNormal(rangeDecoder){
@@ -378,15 +279,15 @@ LZMA.Decoder2 = function(){
   }
 
   function decodeWithMatchByte(rangeDecoder, matchByte){
-    var symbol = 1;
+    var symbol = 1, matchBit, bit;
     
     do{
-      var matchBit = (matchByte >> 7) & 1;
+      matchBit = (matchByte >> 7) & 1;
       matchByte <<= 1;
-      var bit = rangeDecoder.decodeBit(_decoders, ( (1 + matchBit) << 8) + symbol);
+      bit = rangeDecoder.decodeBit(_decoders, ( (1 + matchBit) << 8) + symbol);
       symbol = (symbol << 1) | bit;
       if (matchBit !== bit){
-        while (symbol < 0x100){
+        while(symbol < 0x100){
           symbol = (symbol << 1) | rangeDecoder.decodeBit(_decoders, symbol);
         }
         break;
@@ -411,6 +312,8 @@ LZMA.LiteralDecoder = function(){
       _posMask;
 
   function create(numPosBits, numPrevBits){
+    var i;
+  
     if (_coders
       && (_numPrevBits === numPrevBits)
       && (_numPosBits === numPosBits) ){
@@ -420,18 +323,17 @@ LZMA.LiteralDecoder = function(){
     _posMask = (1 << numPosBits) - 1;
     _numPrevBits = numPrevBits;
     
-    var numStates = 1 << (_numPrevBits + _numPosBits);
+    _coders = [];
     
-    _coders = new Array(numStates);
-    
-    for (var i = 0; i < numStates; ++ i){
+    i = 1 << (_numPrevBits + _numPosBits);
+    while(i --){
       _coders[i] = new LZMA.Decoder2();
     }
   }
   
   function init(){
-    var numStates = 1 << (_numPrevBits + _numPosBits);
-    for (var i = 0; i < numStates; ++ i){
+    var i = 1 << (_numPrevBits + _numPosBits);
+    while(i --){
       _coders[i].init();
     }
   }
@@ -451,25 +353,25 @@ LZMA.LiteralDecoder = function(){
 LZMA.Decoder = function(){
   var _outWindow = new LZMA.OutWindow(),
       _rangeDecoder = new LZMA.RangeDecoder(),
-      _isMatchDecoders = new Array(LZMA.Base.k.NumStates << LZMA.Base.k.NumPosStatesBitsMax),
-      _isRepDecoders = new Array(LZMA.Base.k.NumStates),
-      _isRepG0Decoders = new Array(LZMA.Base.k.NumStates),
-      _isRepG1Decoders = new Array(LZMA.Base.k.NumStates),
-      _isRepG2Decoders = new Array(LZMA.Base.k.NumStates),
-      _isRep0LongDecoders = new Array(LZMA.Base.k.NumStates << LZMA.Base.k.NumPosStatesBitsMax),
-      _posSlotDecoder = new Array(LZMA.Base.k.NumLenToPosStates),
-      _posDecoders = new Array(LZMA.Base.k.NumFullDistances - LZMA.Base.k.EndPosModelIndex),
-      _posAlignDecoder = new LZMA.BitTreeDecoder(LZMA.Base.k.NumAlignBits),
+      _isMatchDecoders = [],
+      _isRepDecoders = [],
+      _isRepG0Decoders = [],
+      _isRepG1Decoders = [],
+      _isRepG2Decoders = [],
+      _isRep0LongDecoders = [],
+      _posSlotDecoder = [],
+      _posDecoders = [],
+      _posAlignDecoder = new LZMA.BitTreeDecoder(4),
       _lenDecoder = new LZMA.LenDecoder(),
       _repLenDecoder = new LZMA.LenDecoder(),
       _literalDecoder = new LZMA.LiteralDecoder(),
       _dictionarySize = -1,
       _dictionarySizeCheck = -1,
-      _posStateMask;
+      _posStateMask,
+      k = 4;
 
-  for (var i = 0; i < LZMA.Base.k.NumLenToPosStates; ++ i){
-    _posSlotDecoder[i] =
-      new LZMA.BitTreeDecoder(LZMA.Base.k.NumPosSlotBits);
+  while(k --){
+    _posSlotDecoder[k] = new LZMA.BitTreeDecoder(6);
   }
 
   function setDictionarySize(dictionarySize){
@@ -485,14 +387,14 @@ LZMA.Decoder = function(){
   }
 
   function setLcLpPb(lc, lp, pb){
-    if (lc > LZMA.Base.k.NumLitContextBitsMax
-      || lp > 4
-      || pb > LZMA.Base.k.NumPosStatesBitsMax){
+    var numPosStates = 1 << pb;
+    
+    if (lc > 8 || lp > 4 || pb > 4){
       return false;
     }
     
     _literalDecoder.create(lp, lc);
-    var numPosStates = 1 << pb;
+    
     _lenDecoder.create(numPosStates);
     _repLenDecoder.create(numPosStates);
     _posStateMask = numPosStates - 1;
@@ -501,19 +403,21 @@ LZMA.Decoder = function(){
   }
 
   function init(){
+    var i = 4;
+  
     _outWindow.init(false);
     
-    LZMA.RangeDecoder.initBitModels(_isMatchDecoders);
-    LZMA.RangeDecoder.initBitModels(_isRep0LongDecoders);
-    LZMA.RangeDecoder.initBitModels(_isRepDecoders);
-    LZMA.RangeDecoder.initBitModels(_isRepG0Decoders);
-    LZMA.RangeDecoder.initBitModels(_isRepG1Decoders);
-    LZMA.RangeDecoder.initBitModels(_isRepG2Decoders);
-    LZMA.RangeDecoder.initBitModels(_posDecoders);
+    LZMA.initBitModels(_isMatchDecoders, 192);
+    LZMA.initBitModels(_isRep0LongDecoders, 192);
+    LZMA.initBitModels(_isRepDecoders, 12);
+    LZMA.initBitModels(_isRepG0Decoders, 12);
+    LZMA.initBitModels(_isRepG1Decoders, 12);
+    LZMA.initBitModels(_isRepG2Decoders, 12);
+    LZMA.initBitModels(_posDecoders, 114);
     
     _literalDecoder.init();
     
-    for (var i = 0; i < LZMA.Base.k.NumLenToPosStates; ++ i){
+    while(i --){
       _posSlotDecoder[i].init();
     }
 
@@ -524,48 +428,39 @@ LZMA.Decoder = function(){
   }
 
   function decode(inStream, outStream, outSize){
+    var state = 0, rep0 = 0, rep1 = 0, rep2 = 0, rep3 = 0, nowPos64 = 0, prevByte = 0,
+        posState, decoder2, len, distance, posSlot, numDirectBits;
+
     _rangeDecoder.setStream(inStream);
     _outWindow.setStream(outStream);
     
     init();
 
-    var state = LZMA.Base.stateInit();
-    var rep0 = 0, rep1 = 0, rep2 = 0, rep3 = 0;
-    
-    var nowPos64 = 0;
-    var prevByte = 0;
-
     while(outSize < 0 || nowPos64 < outSize){
-      var posState = nowPos64 & _posStateMask;
+      posState = nowPos64 & _posStateMask;
       
-      if (_rangeDecoder.decodeBit(_isMatchDecoders,
-        (state << LZMA.Base.k.NumPosStatesBitsMax) + posState) === 0){
-
-        var decoder2 = _literalDecoder.getDecoder(nowPos64, prevByte);
+      if (_rangeDecoder.decodeBit(_isMatchDecoders, (state << 4) + posState) === 0){
+        decoder2 = _literalDecoder.getDecoder(nowPos64 ++, prevByte);
         
-        if ( !LZMA.Base.stateIsCharState(state) ){
+        if (state >= 7){
           prevByte = decoder2.decodeWithMatchByte(_rangeDecoder, _outWindow.getByte(rep0) );
         }else{
           prevByte = decoder2.decodeNormal(_rangeDecoder);
         }
-
         _outWindow.putByte(prevByte);
-        state = LZMA.Base.stateUpdateChar(state);
-        ++ nowPos64;
+        
+        state = state < 4? 0: state - (state < 10? 3: 6);
         
       }else{
       
-        var len;
         if (_rangeDecoder.decodeBit(_isRepDecoders, state) === 1){
           len = 0;
           if (_rangeDecoder.decodeBit(_isRepG0Decoders, state) === 0){
-            if (_rangeDecoder.decodeBit(_isRep0LongDecoders,
-              (state << LZMA.Base.k.NumPosStatesBitsMax) + posState) === 0){
-              state = LZMA.Base.stateUpdateShortRep(state);
+            if (_rangeDecoder.decodeBit(_isRep0LongDecoders, (state << 4) + posState) === 0){
+              state = state < 7? 9: 11;
               len = 1;
             }
           }else{
-            var distance;
             if (_rangeDecoder.decodeBit(_isRepG1Decoders, state) === 0){
               distance = rep1;
             }else{
@@ -581,29 +476,28 @@ LZMA.Decoder = function(){
             rep0 = distance;
           }
           if (len === 0){
-            len = _repLenDecoder.decode(_rangeDecoder, posState) + LZMA.Base.k.MatchMinLen;
-            state = LZMA.Base.stateUpdateRep(state);
+            len = _repLenDecoder.decode(_rangeDecoder, posState) + 2;
+            state = state < 7? 8: 11;
           }
         }else{
           rep3 = rep2;
           rep2 = rep1;
           rep1 = rep0;
           
-          len = LZMA.Base.k.MatchMinLen + _lenDecoder.decode(_rangeDecoder, posState);
-          state = LZMA.Base.stateUpdateMatch(state);
+          len = 2 + _lenDecoder.decode(_rangeDecoder, posState);
+          state = state < 7? 7: 10;
           
-          var posSlot = _posSlotDecoder[LZMA.Base.getLenToPosState(len)].decode(_rangeDecoder);
-          if (posSlot >= LZMA.Base.k.StartPosModelIndex){
+          posSlot = _posSlotDecoder[len <= 5? len - 2: 3].decode(_rangeDecoder);
+          if (posSlot >= 4){
           
-            var numDirectBits = (posSlot >> 1) - 1;
+            numDirectBits = (posSlot >> 1) - 1;
             rep0 = (2 | (posSlot & 1) ) << numDirectBits;
             
-            if (posSlot < LZMA.Base.k.EndPosModelIndex){
-              rep0 += LZMA.BitTreeDecoder.reverseDecode2(_posDecoders,
+            if (posSlot < 14){
+              rep0 += LZMA.reverseDecode2(_posDecoders,
                   rep0 - posSlot - 1, _rangeDecoder, numDirectBits);
             }else{
-              rep0 += (_rangeDecoder.decodeDirectBits(
-                  numDirectBits - LZMA.Base.k.NumAlignBits) << LZMA.Base.k.NumAlignBits);
+              rep0 += _rangeDecoder.decodeDirectBits(numDirectBits - 4) << 4;
               rep0 += _posAlignDecoder.reverseDecode(_rangeDecoder);
               if (rep0 < 0){
                 if (rep0 === -1){
@@ -635,21 +529,23 @@ LZMA.Decoder = function(){
   }
 
   function setDecoderProperties(properties){
+    var value, lc, lp, pb, dictionarySize;
+  
     if (properties.size < 5){
       return false;
     }
 
-    var value = properties.readByte();
-    var lc = value % 9;
+    value = properties.readByte();
+    lc = value % 9;
     value = ~~(value / 9);
-    var lp = value % 5;
-    var pb = ~~(value / 5);
+    lp = value % 5;
+    pb = ~~(value / 5);
     
     if ( !setLcLpPb(lc, lp, pb) ){
       return false;
     }
 
-    var dictionarySize = properties.readByte();
+    dictionarySize = properties.readByte();
     dictionarySize |= properties.readByte() << 8;
     dictionarySize |= properties.readByte() << 16;
     dictionarySize += properties.readByte() * 16777216;
