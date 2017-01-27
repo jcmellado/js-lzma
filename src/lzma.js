@@ -28,6 +28,8 @@ References:
 
 var LZMA = LZMA || {};
 
+(function(LZMA) {
+
 LZMA.OutWindow = function(){
   this._windowSize = 0;
 };
@@ -559,3 +561,5 @@ LZMA.decompressFile = function(inStream, outStream){
 
   return true;
 };
+
+})(LZMA);
