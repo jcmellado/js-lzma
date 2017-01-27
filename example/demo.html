@@ -2,13 +2,13 @@
 <head>
 	<link rel="icon" href="data:;base64,=" />
 	<title>Simple js-lzma demo</title>
-	<script src="src/lzma.js"></script>
-	<script src="src/lzma.shim.js"></script>
+	<script src="../src/lzma.js"></script>
+	<script src="../src/lzma.shim.js"></script>
 </head>
 <body>
 	<script>
 		var oReq = new XMLHttpRequest();
-		oReq.open("GET", 'fixtures/hello-world.txt.lzma', true);
+		oReq.open("GET", 'data/hello-world.txt.lzma', true);
 		oReq.responseType = "arraybuffer";
 		oReq.onload = function(oEvent)
 		{
