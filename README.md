@@ -66,26 +66,24 @@ Just five bytes. The first one containing `lc`, `lp` and `pb` parameters, and th
 
 ```html
 <html>
-<head>
+  <head>
     <script src="src/lzma.js"></script>
     <script src="src/lzma.shim.js"></script>
-</head>
-<body>
+  </head>
+  <body>
     <script>
-        var oReq = new XMLHttpRequest();
-        oReq.open("GET", 'fixtures/hello-world.txt.lzma', true);
-        oReq.responseType = "arraybuffer";
-        oReq.onload = function(oEvent)
-        {
-            var buffer = oReq.response;
-            var input = new LZMA.iStream(buffer);
-            var output = new LZMA.oStream();
-            LZMA.decompressFile(input, output);
-            alert(output);
-        };
-        oReq.send();
+      var oReq = new XMLHttpRequest();
+      oReq.open("GET", /* Put the url to your compressed file here */, true);
+      oReq.responseType = "arraybuffer";
+      oReq.onload = function(oEvent){
+        var buffer = oReq.response;
+        var input = new LZMA.iStream(buffer);
+        var output = new LZMA.oStream();
+        LZMA.decompressFile(input, output);
+      };
+      oReq.send();
     </script>
-</body>
+  </body>
 </html>
 ```
 
