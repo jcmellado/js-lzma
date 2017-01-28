@@ -24,11 +24,15 @@ THE SOFTWARE.
 References:
 - "LZMA SDK" by Igor Pavlov
   http://www.7-zip.org/sdk.html
+- "The .lzma File Format" from xz documentation
+  https://github.com/joachimmetz/xz/blob/master/doc/lzma-file-format.txt
 */
 
 var LZMA = LZMA || {};
 
 (function(LZMA) {
+
+"use strict";
 
 LZMA.OutWindow = function(){
   this._windowSize = 0;
@@ -36,7 +40,9 @@ LZMA.OutWindow = function(){
 
 LZMA.OutWindow.prototype.create = function(windowSize){
   if ( (!this._buffer) || (this._windowSize !== windowSize) ){
-    this._buffer = [];
+    // using a typed array here gives a big boost on Firefox
+    // not much change in chrome (but more memory efficient)
+    this._buffer = new Uint8Array(windowSize);
   }
   this._windowSize = windowSize;
   this._pos = 0;
@@ -46,8 +52,12 @@ LZMA.OutWindow.prototype.create = function(windowSize){
 LZMA.OutWindow.prototype.flush = function(){
   var size = this._pos - this._streamPos;
   if (size !== 0){
-    while(size --){
-      this._stream.writeByte(this._buffer[this._streamPos ++]);
+    if (this._stream.writeBytes){
+      this._stream.writeBytes(this._buffer, size);
+    } else {
+      for (var i = 0; i < size; i ++){
+        this._stream.writeByte(this._buffer[i]);
+      }
     }
     if (this._pos >= this._windowSize){
       this._pos = 0;
@@ -120,7 +130,7 @@ LZMA.RangeDecoder.prototype.init = function(){
 
   this._code = 0;
   this._range = -1;
-  
+
   while(i --){
     this._code = (this._code << 8) | this._stream.readByte();
   }

@@ -75,7 +75,7 @@ function decodeJsLZMA(buffer)
 		var input = new JSLZMA.iStream(buffer);
 		var output = new JSLZMA.oStream();
 		JSLZMA.decompressFile(input, output);
-		resolve(output.output);
+		resolve(output.toUint8Array());
 	});
 }
 
