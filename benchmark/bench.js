@@ -1,20 +1,20 @@
 // urls to load for tests
 var urls = [
 	[
-		['pako-gz', '/data/stars.names.json.gz'],
-		['node-lz4', '/data/stars.names.json.lz4'],
-		['js-lzma', '/data/stars.names.json.lzma'],
-		['node-lzma', '/data/stars.names.json.lzma']
+		['pako-gz', 'data/stars.names.json.gz'],
+		['node-lz4', 'data/stars.names.json.lz4'],
+		['js-lzma', 'data/stars.names.json.lzma'],
+		['node-lzma', 'data/stars.names.json.lzma']
 	], [
-		['pako-gz', '/data/stars.col.db.gz'],
-		['node-lz4', '/data/stars.col.db.lz4'],
-		['js-lzma', '/data/stars.col.db.lzma'],
-		['node-lzma', '/data/stars.col.db.lzma']
+		['pako-gz', 'data/stars.col.db.gz'],
+		['node-lz4', 'data/stars.col.db.lz4'],
+		['js-lzma', 'data/stars.col.db.lzma'],
+		['node-lzma', 'data/stars.col.db.lzma']
 	], [
-		['pako-gz', '/data/stars.pos.db.gz'],
-		['node-lz4', '/data/stars.pos.db.lz4'],
-		['js-lzma', '/data/stars.pos.db.lzma'],
-		['node-lzma', '/data/stars.pos.db.lzma']
+		['pako-gz', 'data/stars.pos.db.gz'],
+		['node-lz4', 'data/stars.pos.db.lz4'],
+		['js-lzma', 'data/stars.pos.db.lzma'],
+		['node-lzma', 'data/stars.pos.db.lzma']
 	]
 ];
 
