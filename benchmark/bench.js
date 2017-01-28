@@ -4,16 +4,19 @@ var urls = [
 		['pako-gz', 'data/stars.names.json.gz'],
 		['node-lz4', 'data/stars.names.json.lz4'],
 		['js-lzma', 'data/stars.names.json.lzma'],
+		['js-pwlzma', 'data/stars.names.json.plzma'],
 		['node-lzma', 'data/stars.names.json.lzma']
 	], [
 		['pako-gz', 'data/stars.col.db.gz'],
 		['node-lz4', 'data/stars.col.db.lz4'],
 		['js-lzma', 'data/stars.col.db.lzma'],
+		['js-pwlzma', 'data/stars.col.db.plzma'],
 		['node-lzma', 'data/stars.col.db.lzma']
 	], [
 		['pako-gz', 'data/stars.pos.db.gz'],
 		['node-lz4', 'data/stars.pos.db.lz4'],
 		['js-lzma', 'data/stars.pos.db.lzma'],
+		['js-pwlzma', 'data/stars.pos.db.plzma'],
 		['node-lzma', 'data/stars.pos.db.lzma']
 	]
 ];
@@ -69,6 +72,20 @@ function decodePakoGZ(buffer)
 	})
 }
 
+var wlzma = new WLZMA.Manager(0, "../src/wlzma.wrk.js");
+
+function decodeJsPWLZMA(buffer)
+{
+	var input = new JSLZMA.iStream(buffer);
+	return new Promise(function (resolve, reject) {
+		PWLZMA.decode(wlzma, input)
+		.then(function(output) {
+			resolve(output.toUint8Array());
+		})
+		.catch(reject)
+	});
+}
+
 function decodeJsLZMA(buffer)
 {
 	return new Promise(function (resolve, reject) {
@@ -119,6 +136,7 @@ var decoder = {
 	'pako-gz': decodePakoGZ,
 	'node-lz4': decodeNodeLZ4,
 	'js-lzma': decodeJsLZMA,
+	'js-pwlzma': decodeJsPWLZMA,
 	'node-lzma': decodeNodeLZMA,
 };
 
