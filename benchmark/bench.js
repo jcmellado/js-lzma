@@ -4,28 +4,47 @@ var urls = [
 		['pako-gz', 'data/stars.names.json.gz'],
 		['node-lz4', 'data/stars.names.json.lz4'],
 		['js-lzma', 'data/stars.names.json.lzma'],
+		['js-lzmasm', 'data/stars.names.json.lzma'],
 		['js-pwlzma', 'data/stars.names.json.plzma'],
 		['node-lzma', 'data/stars.names.json.lzma']
 	], [
 		['pako-gz', 'data/stars.col.db.gz'],
 		['node-lz4', 'data/stars.col.db.lz4'],
 		['js-lzma', 'data/stars.col.db.lzma'],
+		['js-lzmasm', 'data/stars.col.db.lzma'],
 		['js-pwlzma', 'data/stars.col.db.plzma'],
 		['node-lzma', 'data/stars.col.db.lzma']
 	], [
 		['pako-gz', 'data/stars.pos.db.gz'],
 		['node-lz4', 'data/stars.pos.db.lz4'],
 		['js-lzma', 'data/stars.pos.db.lzma'],
+		['js-lzmasm', 'data/stars.pos.db.lzma'],
 		['js-pwlzma', 'data/stars.pos.db.plzma'],
 		['node-lzma', 'data/stars.pos.db.lzma']
-	]
+	]/* , [
+		['pako-gz', 'data/test.dat.gz'],
+		['node-lz4', 'data/test.dat.lz4'],
+		['js-lzma', 'data/test.dat.lzma'],
+		['js-lzmasm', 'data/test.dat.lzma'],
+		['js-pwlzma', 'data/test.dat.plzma'],
+		['node-lzma', 'data/test.dat.lzma']
+	], [
+		['pako-gz', 'data/test-big.dat.gz'],
+		['node-lz4', 'data/test-big.dat.lz4'],
+		['js-lzma', 'data/test-big.dat.lzma'],
+		['js-lzmasm', 'data/test-big.dat.lzma'],
+		['js-pwlzma', 'data/test-big.dat.plzma'],
+		['node-lzma', 'data/test-big.dat.lzma']
+	] */
 ];
 
 // name mappings
 var names = [
 	'names',
 	'col',
-	'pos'
+	'pos',
+	'big-bin',
+	'extreme-bin'
 ];
 
 // route logs to browser window
@@ -137,7 +156,7 @@ var decoder = {
 	'node-lz4': decodeNodeLZ4,
 	'js-lzma': decodeJsLZMA,
 	'js-pwlzma': decodeJsPWLZMA,
-	'node-lzma': decodeNodeLZMA,
+	// 'node-lzma': decodeNodeLZMA,
 };
 
 // statistics
