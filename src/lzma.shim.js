@@ -29,7 +29,7 @@ var LZMA = LZMA || {};
 	{
 		// create byte array view of buffer
 		this.array = new Uint8Array(buffer);
-		// convenience status member 
+		// convenience status member
 		this.size = buffer.byteLength;
 		// position pointer
 		this.offset = 0;
@@ -42,7 +42,7 @@ var LZMA = LZMA || {};
 		return this.array[this.offset++];
 	}
 
-	// output stream constructor 
+	// output stream constructor
 	LZMA.oStream = function(buffers)
 	{
 		// aggregated size
@@ -144,6 +144,34 @@ var LZMA = LZMA || {};
 		for (var i = 0; i < this.buffers.length; i++) {
 			fn.call(this, this.buffers[i]);
 		}
+	}
+
+	// returns a typed array of codepoints; depending if
+	// UTF8 decoder is loaded, we treat the byte sequence
+	// either as an UTF8 sequence or fixed one byte encoding
+	// the result can then be converted back to a JS string
+	LZMA.oStream.prototype.toCodePoints = function toCodePoints()
+	{
+		// treat as one byte encoding (i.e. US-ASCII)
+		if (!LZMA.UTF8) { this.toUint8Array(); }
+		// we could probably make this work with our chunked
+		// buffers directly, but unsure how much we could gain
+		return LZMA.UTF8.decode(this.toUint8Array());
+	}
+
+	// convert the buffer to a javascript string object
+	LZMA.oStream.prototype.toString = function toString()
+	{
+		var buffers = this.buffers, string = '';
+		// optionally get the UTF8 codepoints
+		// possibly avoid creating a continous buffer
+		if (LZMA.UTF8) buffers = [ this.toCodePoints() ];
+		for (var n = 0, nL = buffers.length; n < nL; n++) {
+			for (var i = 0, iL = buffers[n].length; i < iL; i++) {
+				string += String.fromCharCode(buffers[n][i]);
+			}
+		}
+		return string;
 	}
 
 })(LZMA);
