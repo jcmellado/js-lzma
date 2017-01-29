@@ -1,15 +1,15 @@
-# wlzma.js
+# wlzma.js #
 
 WebWorker version of [`lzmap.js`](lzmap.md).
 
-## Introduction
+## Introduction ##
 
 This version of `js-lzma` decompresses the lzma data stream in a
 background thread. The interface is the same promisified one
 as with [`js-lzmap`](lzmap.md). Since we use background workers,
 this interface must be asynchronous and no synced methods exist.
 
-## Usage
+## Usage ##
 
 Here's a complete example with an ajax loaded url:
 
@@ -41,9 +41,9 @@ oReq.send();
 
 It has the same interface as [`LZMAP.decodeFile`](lzmap.md)!
 
-## Constructing the Manager
+## Constructing the Manager ##
 
-`WLZMA.Manager(workers, worker_url)`
+### `WLZMA.Manager(workers, worker_url)` ###
 
 Whenever dealing with WebWorkers (threads), you need to have a central
 manager that schedules the jobs to the available workers. We do not want
@@ -66,8 +66,12 @@ On easy way to set the worker url globally, is to set `WLZMA.wrkurl`:
 
 ### Exposed methods
 
-`wlzma.decode(iStream|Uint8Array|ArrayBuffer)`
+#### `wlzma.decode(iStream|Uint8Array|ArrayBuffer)` ####
 
-Decode an in memory lzma document. Returns a promise and will resolve with
-a [`LZMA.iStream`](lzma.shim.md) object, which may consist of multiple array
-buffers. 
+Decode an in memory lzma document. Returns a promise that will resolve
+with a [`LZMA.iStream`](lzma.shim.md) object, which may consist of
+multiple array buffers (call `toUint8Array` for a continous array).
+
+## Credits ##
+
+- Main Author: [Marcel Greter](https://github.com/mgreter)

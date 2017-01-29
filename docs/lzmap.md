@@ -1,12 +1,11 @@
-# lzmap.js
+# lzmap.js #
 
-Simple `Promise.js` wrapper for [`lzma.js`](lzma.md).
+Simple `Promise.js` wrapper for [`lzma.js`](../README.md).
+This is a bit pointless, since `js-lzma` is synchronous only.
+But it may make sense to use it if you want to switch
+to/from the webworker based implementation later.
 
-This is a bit pointless, since the `js-lzma` is already
-synchronous only. But it may make sense in case you want
-to change between worker and regular implementation.
-
-## Usage
+## Usage ##
 
 Here's a complete example with an ajax loaded url:
 
@@ -33,4 +32,8 @@ oReq.onload = function(oEvent)
 oReq.send();
 ```
 
-It basically wraps `LZMA.decodeFile` into a promise!
+It basically wraps [`LZMA.decodeFile`](../README.md) into a promise!
+
+## Credits ##
+
+- Main Author: [Marcel Greter](https://github.com/mgreter)

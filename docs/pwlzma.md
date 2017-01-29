@@ -1,8 +1,8 @@
-# pwlzma.js
+# pwlzma.js #
 
 Parallel custom decompressor for [`wlzma.js`](wlzma.md).
 
-## Introduction
+## Introduction ##
 
 Uses a custom file format for parallel chunks!
 
@@ -22,28 +22,30 @@ custom file format, which I simply named `.plzma`. Standing
 for parallel lzma. The format is dead simple and can be explained
 in a few paragraphs.
 
-bytes [0-6]: static header `PLZMA1` for mime type check
-bytes [6-10]: number of blocks in big-endian order
-bytes [10-10+4*blocks]: block sizes in big-endian order
+- bytes [0-6]: static header `PLZMA1` for mime type check
+- bytes [6-10]: number of blocks in big-endian order
+- bytes [10-10+4*blocks]: block sizes in big-endian order
 
 After `10+4*blocks` are the data blocks. All blocks can
 be decoded like regular lzma files. The results are simply
 concatenated to form the final result.
 
-## Creating custom archives
+## Creating custom archives ##
 
-I included a simple perl script to create such archives. The options
-are very limited and it might not be the platform most people feel
-comfortable with (you should be fine on linux though!). If you have
-the need for this feature I hope you can port this over to your
-favourite programming language. In the long run it would be best
-to figure out how to do this with native lzma streams!
+I included a [simple perl script][1] to create such archives. The
+options are very limited and it might not be the platform most
+people feel comfortable with (you should be fine on linux though!).
+If you have the need for this feature I hope you can port this over
+to your favourite programming language. In the long run it would be
+best to figure out how to do this with native lzma streams!
 
 ```bash
 $ perl plzma.pl test.dat 1>/dev/null
 ```
 
-## Usage
+[1]: ../scripts/plzma.pl
+
+## Usage ##
 
 Here's a complete example with an ajax loaded url:
 
@@ -76,3 +78,6 @@ oReq.send();
 
 It has the same interface as [`WLZMA.decodeFile`](wlzma.md)!
 
+## Credits ##
+
+- Main Author: [Marcel Greter](https://github.com/mgreter)
