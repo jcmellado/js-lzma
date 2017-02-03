@@ -24,11 +24,15 @@ THE SOFTWARE.
 References:
 - "LZMA SDK" by Igor Pavlov
   http://www.7-zip.org/sdk.html
+- "The .lzma File Format" from xz documentation
+  https://github.com/joachimmetz/xz/blob/master/doc/lzma-file-format.txt
 */
 
 var LZMA = LZMA || {};
 
 (function(LZMA) {
+
+"use strict";
 
 LZMA.OutWindow = function(){
   this._windowSize = 0;
@@ -36,7 +40,9 @@ LZMA.OutWindow = function(){
 
 LZMA.OutWindow.prototype.create = function(windowSize){
   if ( (!this._buffer) || (this._windowSize !== windowSize) ){
-    this._buffer = [];
+    // using a typed array here gives a big boost on Firefox
+    // not much change in chrome (but more memory efficient)
+    this._buffer = new Uint8Array(windowSize);
   }
   this._windowSize = windowSize;
   this._pos = 0;
@@ -46,8 +52,12 @@ LZMA.OutWindow.prototype.create = function(windowSize){
 LZMA.OutWindow.prototype.flush = function(){
   var size = this._pos - this._streamPos;
   if (size !== 0){
-    while(size --){
-      this._stream.writeByte(this._buffer[this._streamPos ++]);
+    if (this._stream.writeBytes){
+      this._stream.writeBytes(this._buffer, size);
+    } else {
+      for (var i = 0; i < size; i ++){
+        this._stream.writeByte(this._buffer[i]);
+      }
     }
     if (this._pos >= this._windowSize){
       this._pos = 0;
@@ -120,7 +130,7 @@ LZMA.RangeDecoder.prototype.init = function(){
 
   this._code = 0;
   this._range = -1;
-  
+
   while(i --){
     this._code = (this._code << 8) | this._stream.readByte();
   }
@@ -373,6 +383,72 @@ LZMA.Decoder.prototype.setLcLpPb = function(lc, lp, pb){
   return true;
 };
 
+LZMA.Decoder.prototype.setProperties = function(props){
+  if ( !this.setLcLpPb(props.lc, props.lp, props.pb) ){
+    throw Error("Incorrect stream properties");
+  }
+  if ( !this.setDictionarySize(props.dictionarySize) ){
+    throw Error("Invalid dictionary size");
+  }
+};
+
+LZMA.Decoder.prototype.decodeHeader = function(inStream){
+
+  var properties, lc, lp, pb,
+      uncompressedSize,
+      dictionarySize;
+
+  if (inStream.size < 13){
+    return false;
+  }
+
+  // +------------+----+----+----+----+--+--+--+--+--+--+--+--+
+  // | Properties |  Dictionary Size  |   Uncompressed Size   |
+  // +------------+----+----+----+----+--+--+--+--+--+--+--+--+
+
+  properties = inStream.readByte();
+  lc = properties % 9;
+  properties = ~~(properties / 9);
+  lp = properties % 5;
+  pb = ~~(properties / 5);
+
+  dictionarySize = inStream.readByte();
+  dictionarySize |= inStream.readByte() << 8;
+  dictionarySize |= inStream.readByte() << 16;
+  dictionarySize += inStream.readByte() * 16777216;
+
+  uncompressedSize = inStream.readByte();
+  uncompressedSize |= inStream.readByte() << 8;
+  uncompressedSize |= inStream.readByte() << 16;
+  uncompressedSize += inStream.readByte() * 16777216;
+
+  inStream.readByte();
+  inStream.readByte();
+  inStream.readByte();
+  inStream.readByte();
+
+  return {
+    // The number of high bits of the previous
+    // byte to use as a context for literal encoding.
+    lc: lc,
+    // The number of low bits of the dictionary
+    // position to include in literal_pos_state.
+    lp: lp,
+    // The number of low bits of the dictionary
+    // position to include in pos_state.
+    pb: pb,
+    // Dictionary Size is stored as an unsigned 32-bit
+    // little endian integer. Any 32-bit value is possible,
+    // but for maximum portability, only sizes of 2^n and
+    // 2^n + 2^(n-1) should be used.
+    dictionarySize: dictionarySize,
+    // Uncompressed Size is stored as unsigned 64-bit little
+    // endian integer. A special value of 0xFFFF_FFFF_FFFF_FFFF
+    // indicates that Uncompressed Size is unknown.
+    uncompressedSize: uncompressedSize
+  };
+};
+
 LZMA.Decoder.prototype.init = function(){
   var i = 4;
 
@@ -398,7 +474,7 @@ LZMA.Decoder.prototype.init = function(){
   this._rangeDecoder.init();
 };
 
-LZMA.Decoder.prototype.decode = function(inStream, outStream, outSize){
+LZMA.Decoder.prototype.decodeBody = function(inStream, outStream, maxSize){
   var state = 0, rep0 = 0, rep1 = 0, rep2 = 0, rep3 = 0, nowPos64 = 0, prevByte = 0,
       posState, decoder2, len, distance, posSlot, numDirectBits;
 
@@ -407,7 +483,7 @@ LZMA.Decoder.prototype.decode = function(inStream, outStream, outSize){
 
   this.init();
 
-  while(outSize < 0 || nowPos64 < outSize){
+  while(maxSize < 0 || nowPos64 < maxSize){
     posState = nowPos64 & this._posStateMask;
 
     if (this._rangeDecoder.decodeBit(this._isMatchDecoders, (state << 4) + posState) === 0){
@@ -528,38 +604,42 @@ LZMA.decompress = function(properties, inStream, outStream, outSize){
   var decoder = new LZMA.Decoder();
 
   if ( !decoder.setDecoderProperties(properties) ){
-    throw "Incorrect stream properties";
+    throw Error("Incorrect lzma stream properties");
   }
 
-  if ( !decoder.decode(inStream, outStream, outSize) ){
-    throw "Error in data stream";
+  if ( !decoder.decodeBody(inStream, outStream, outSize) ){
+    throw Error("Error in lzma data stream");
   }
 
-  return true;
+  return outStream;
 };
 
 LZMA.decompressFile = function(inStream, outStream){
-  var decoder = new LZMA.Decoder(), outSize;
-
-  if ( !decoder.setDecoderProperties(inStream) ){
-    throw "Incorrect stream properties";
+  // upgrade ArrayBuffer to input stream
+  if (inStream instanceof ArrayBuffer) {
+    inStream = new LZMA.iStream(inStream);
   }
-
-  outSize = inStream.readByte();
-  outSize |= inStream.readByte() << 8;
-  outSize |= inStream.readByte() << 16;
-  outSize += inStream.readByte() * 16777216;
-
-  inStream.readByte();
-  inStream.readByte();
-  inStream.readByte();
-  inStream.readByte();
-
-  if ( !decoder.decode(inStream, outStream, outSize) ){
-    throw "Error in data stream";
+  // optionaly create a new output stream
+  if (!outStream && LZMA.oStream) {
+    outStream = new LZMA.oStream();
   }
-
-  return true;
+  // create main decoder instance
+  var decoder = new LZMA.Decoder();
+  // read all the header properties
+  var header = decoder.decodeHeader(inStream);
+  // get maximum output size (very big!?)
+  var maxSize = header.uncompressedSize;
+  // setup/init decoder states
+  decoder.setProperties(header);
+  // invoke the main decoder function
+  if ( !decoder.decodeBody(inStream, outStream, maxSize) ){
+    // only generic error given here
+    throw Error("Error in lzma data stream");
+  }
+  // return result
+  return outStream;
 };
+
+LZMA.decode = LZMA.decompressFile;
 
 })(LZMA);

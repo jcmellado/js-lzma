@@ -1,0 +1,36 @@
+<html>
+<head>
+	<link rel="icon" href="data:;base64,=" />
+
+	<!-- load js-lzma library and shims -->
+	<script src="../src/lzma.js"></script>
+	<script src="../src/lzma.shim.js"></script>
+	<script src="../src/lzmap.js"></script>
+	<script src="../src/wlzma.js"></script>
+	<script src="../src/pwlzma.js"></script>
+	<script>var JSLZMA = LZMA;</script>
+
+	<!-- load node-lzma with worker -->
+	<script src="node-lzma/lzma.js"></script>
+	<script>var lzma = new LZMA("node-lzma/lzma_worker.js");</script>
+
+	<!-- load pako zlib port -->
+	<script src="pako/inflate.js"></script>
+
+	<!-- load node-lz4 library -->
+	<script src="node-lz4/lz4.js"></script>
+
+	<!-- load benchmark lib and deps -->
+	<script src="vendor/lodash.js"></script>
+	<script src="vendor/platform.js"></script>
+	<script src="vendor/benchmark.js"></script>
+
+	<!-- setup the benchmark suite -->
+	<script src="bench.js"></script>
+
+</head>
+<body>
+	<!-- start the benchmarks -->
+	<script>testAssets();</script>
+</body>
+</html>
