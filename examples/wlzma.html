@@ -1,0 +1,50 @@
+<html>
+<head>
+	<link rel="icon" href="data:;base64,=" />
+	<title>Simple wlzma.js demo</title>
+	<script src="../src/wlzma.js"></script>
+	<script src="../src/lzma.shim.js"></script>
+	<script src="libs/digest.md5.js"></script>
+	<script>var tsturl = '../data/stars.pos.db.lzma';</script>
+</head>
+<body>
+	<script>
+
+		// create worker manager (pass relative path)
+		// loading workers has some drawbacks with urls
+		var wlzma = new WLZMA.Manager(0, "../src/wlzma.wrk.js");
+		// create ajax request to load asset
+		var oReq = new XMLHttpRequest();
+		oReq.open("GET", tsturl, true);
+		oReq.responseType = "arraybuffer";
+		oReq.onload = function(oEvent)
+		{
+			var t0 = performance.now();
+			// invoke asynchronous decoding
+			wlzma.decode(oReq.response)
+			// wait for results to come back
+			.then(function (outStream) {
+				// report the decoding time
+				var t9 = performance.now();
+				var delta = (t9 - t0).toFixed(2);
+				console.info("in " + delta + " ms.")
+				var md5 = new MD5();
+				function digest(bytes) {
+					for (var i = 0; i < bytes.length; i++) {
+						md5.addByte(bytes[i]);
+					}
+				}
+				outStream.forEach(digest);
+				console.log("MD5", md5.getHex());
+			})
+			// good chance it failed
+			.catch(function(err) {
+				// make user aware of problem
+				throw new Error(err.message);
+			})
+		};
+		oReq.send();
+
+	</script>
+</body>
+</html>

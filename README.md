@@ -203,15 +203,6 @@ pako-gz x 30.79 ops/sec ±0.81% (51 runs sampled) (15.74 MB/s - 70.50%)
 js-pwlzma x 12.76 ops/sec ±3.31% (35 runs sampled) (11.17 MB/s - 53.97%)
 js-lzma x 4.28 ops/sec ±0.56% (25 runs sampled) (7.34 MB/s - 52.39%)
 node-lzma x 0.60 ops/sec ±2.71% (7 runs sampled) (1.09 MB/s - 58.84%)
-TESTING: big-bin (17.5MB with good to compress binary data)*
-pako-gz x 6.02 ops/sec ±2.49% (33 runs sampled) (94.49 MB/s - 40.71%)
-js-pwlzma x 1.11 ops/sec ±1.71% (10 runs sampled) (18.99 MB/s - 40.41%)
-js-lzma x 0.61 ops/sec ±22.32% (7 runs sampled) (10.57 MB/s - 40.39%)
-TESTING: extreme-bin (75MB with hard to compress binary data)*
-pako-gz x 1.32 ops/sec ±0.45% (11 runs sampled) (94.52 MB/s - 90.43%)
-node-lz4 x 1.67 ops/sec ±0.16% (13 runs sampled) (4.11 MB/s - 2760%)
-js-lzma x 0.08 ops/sec ±2.34% (5 runs sampled) (5.81 MB/s - 85.82%)
-js-pwlzma x 0.24 ops/sec ±2.63% (6 runs sampled) (17.79 MB/s - 87.04%)
 ```
 
 *Note*: lz4 did not seem to return usefull results for this size. I also
@@ -229,8 +220,3 @@ Output size is limited to 32 bits.
 
 Sorry, that is not planned. This library is part of another project of
 mine that only needed the decompression algorithm.
-
-## Credits ##
-
-- Main Author: [Juan Mellado](https://github.com/jcmellado)
-- Contributor: [Marcel Greter](https://github.com/mgreter)

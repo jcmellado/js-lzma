@@ -1,0 +1,89 @@
+<html>
+<head>
+	<meta charset="utf-8">
+	<link rel="icon" href="data:;base64,=" />
+	<title>Simple wlzma.js demo</title>
+	<script src="../src/lzma.js"></script>
+	<script src="../src/lzma.shim.js"></script>
+	<script src="../src/lzmap.js"></script>
+	<script src="../src/wlzma.js"></script>
+	<script src="libs/utf8.decode.js"></script>
+	<script src="libs/digest.md5.js"></script>
+	<script>var tsturl = '../data/unicode.txt.lzma';</script>
+</head>
+<body>
+	<script>
+		// create worker manager (pass relative path)
+		// loading workers has some drawbacks with urls
+		var wlzma = new WLZMA.Manager(0, "../src/wlzma.wrk.js");
+
+
+		// create ajax request to load asset
+		var oReq = new XMLHttpRequest();
+		oReq.open("GET", tsturl, true);
+		oReq.responseType = "arraybuffer";
+		oReq.onload = function(oEvent)
+		{
+
+			// this is not strictly needed, but
+			// it can screw with our timings
+			wlzma.ready(function () {
+
+				var t0 = performance.now();
+				// invoke asynchronous decoding
+				wlzma.decode(oReq.response)
+				// wait for results to come back
+				.then(function (outStream) {
+					// report the decoding time
+					var t1 = performance.now();
+					var delta = (t1 - t0).toFixed(2);
+					console.info("Decompressed in " + delta + " ms.")
+
+					var string = '';
+					var t2 = performance.now();
+					var bytes = outStream.toUint8Array();
+					var codes = outStream.toCodePoints();
+					var t3 = performance.now();
+					var delta = (t3 - t2).toFixed(2);
+					console.info("UTF8 decoded in " + delta + " ms.")
+					for (var i = 0; i < codes.length; i++) {
+						string += String.fromCharCode(codes[i]);
+					}
+					var t4 = performance.now();
+					var delta = (t4 - t3).toFixed(2);
+					console.info("Stringified in " + delta + " ms.")
+
+					var md5 = new MD5();
+					var t5 = performance.now();
+					function digest(bytes) {
+						for (var i = 0; i < bytes.length; i++) {
+							md5.addByte(bytes[i]);
+						}
+					}
+					outStream.forEach(digest);
+					var t6 = performance.now();
+					var delta = (t6 - t5).toFixed(2);
+					console.info("MD5 digested in " + delta + " ms.")
+					console.log(md5.getHex());
+
+					var delta = (t6 - t0).toFixed(2);
+					console.info("Total time needed: " + delta + " ms.")
+					document.body.innerHTML = outStream; // implicit toString
+
+				})
+				// good chance it failed
+				.catch(function(err) {
+					// make user aware of problem
+					throw new Error(err.message);
+				})
+
+			});
+			// EO wlzma.ready
+
+		};
+		// EO onLoad
+		oReq.send();
+
+	</script>
+</body>
+</html>

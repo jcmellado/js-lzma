@@ -390,7 +390,7 @@ LZMA.Decoder.prototype.setProperties = function(props){
   if ( !this.setDictionarySize(props.dictionarySize) ){
     throw Error("Invalid dictionary size");
   }
-}
+};
 
 LZMA.Decoder.prototype.decodeHeader = function(inStream){
 
@@ -447,8 +447,7 @@ LZMA.Decoder.prototype.decodeHeader = function(inStream){
     // indicates that Uncompressed Size is unknown.
     uncompressedSize: uncompressedSize
   };
-
-}
+};
 
 LZMA.Decoder.prototype.init = function(){
   var i = 4;
